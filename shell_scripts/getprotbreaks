@@ -1,0 +1,27 @@
+#!/bin/sh
+# Scriptname: getprotbreaks
+# 
+# Cat Chenal - May-20-09 @ Gunner Lab
+#
+# Purpose: To list protein breaks as per pK.out.
+# Intent: To be used with this dir structure (used for pKa Challenge):
+#         - ID(d)
+#          -- run_type(d) (i.e. run flavor: qq, q, default)
+#            - run.prm
+#            - ID.pdb
+#            - pK.out, etc
+#
+# Argument; folder name (not path) that contains pK.out. 
+# Output: The list of non-breaking directories + count.
+# -------------------------------------------------------
+USAGE=" getbreaks must be called above the working dir of an mcce run; its argument is the NAME 
+of the working folder."
+
+grep -c NTR */$1/sum_crg.out > NTRcnt_$1
+echo BREAKS:
+egrep ':[2-9]$' NTRcnt_$1
+echo   `egrep -c ':[2-9]$' NTRcnt_$1` out of `ls */$1/pK.out|grep -c out`
+echo 
+echo NO BREAKS:
+egrep ':[0-1]$' NTRcnt_$1
+echo   `egrep -c ':[0-1]$' NTRcnt_$1` out of `ls */$1/pK.out|grep -c out`

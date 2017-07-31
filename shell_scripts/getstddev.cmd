@@ -1,0 +1,1 @@
+awk 'NR>1 {tot+=$NF;n=(NR-1); delta = $NF - avg; avg += delta / n; mean2 += delta * ($NF - avg); aver=(NF+1); $aver=avg; print}; END {print "\tTOT= "tot"\t\t\t\tSTEDEV= "sqrt(mean2 /n)}' head3-sumE.lst > head3-stdev.lst

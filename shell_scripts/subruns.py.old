@@ -1,0 +1,87 @@
+#!/usr/bin/python
+# This program splits a working directory into subdirctories that can run partial delphi
+# NOTe: MCCE version is hard-coded
+import sys, os, zlib
+
+def print_help():
+   print "subruns.py [-s n_steps]"
+   print "   This program divides step 3 of MCCE into working subdirectories, which"
+   print "   contain partial delphi run setups, and prepare a submit script."
+   print "   When Step 3 in the subdirectories is over, this program can combine"
+   print "   the result into current directory.\n"
+   print "   -s n_steps: split to sub directories which contain n_steps of delphi each"
+   return
+
+def split_dirs(n_steps):
+   n_confs = len(open("head2.lst").readlines()) - 1
+   
+   # create a run.prm template
+   runprm = open("run.prm").readlines()
+   lines = []
+   for line in runprm:
+      if   line.find("(DO_PREMCCE)") >=0:
+         line = "f        step 1: pre-run, pdb-> mcce pdb                    (DO_PREMCCE)\n"
+      elif line.find("(DO_ROTAMERS)") >=0:
+         line = "f        step 2: make rotatmers                             (DO_ROTAMERS)\n"
+      elif line.find("(DO_ENERGY)") >=0:
+         line = "t        step 3: do energy calculations                     (DO_ENERGY)\n"
+      elif line.find("(DO_MONTE)") >=0:
+         line = "f        step 4: monte carlo sampling                       (DO_MONTE)\n"
+      elif line.find("(DELPHI_START)") >=0:
+         line = "#START#  delphi start conformer number, 0 based             (DELPHI_START)\n"
+      elif line.find("(DELPHI_END)") >=0:         
+         line = "#END#    delphi end conformer number, self included         (DELPHI_END)\n"
+      lines.append(line)
+   # PB: not checking input value of n_steps: if 0 then #(dir created) = #(lines in head2.lst)
+
+   # number of sub directories      
+   n_dirs = n_confs/n_steps + 1
+   
+   # create sub directories, copy run.prm and step2_out.pdb
+   for i in range(n_dirs):
+      dir_name = "sub%03d" % (i+1)
+      try:
+         os.mkdir(dir_name)
+      except:
+         pass
+      fp = open("%s/run.prm"%dir_name, "w")
+      for line in lines:
+         fp.write(line.replace("#START#", "%d" % (i*n_steps+1)).replace("#END#", "%d" % ((i+1)*n_steps)))
+      fp.close()
+      
+      try:
+         os.remove("%s/step2_out.pdb" % dir_name)
+         os.remove("%s/new.tpl" % dir_name)
+      except:
+         pass
+      os.symlink("../step2_out.pdb", "%s/step2_out.pdb" % dir_name);
+      os.symlink("../new.tpl", "%s/new.tpl" % dir_name);
+   # create condor_submit file
+   lines = []
+   lines.append("Executable = /home/mcce/mcce2.5.1/mcce\n")
+   lines.append("Universe = vanilla\n")
+   lines.append("error   = condor.err\n")
+   lines.append("output  = run.log\n")
+   lines.append("Log     = condor.log\n")
+   lines.append("getenv   = true\n")
+   lines.append("Notification = never\n\n")
+   
+   for i in range(n_dirs):
+      lines.append("Initialdir = sub%03d\n" % (i+1))
+      lines.append("queue\n\n")
+
+   open("submit", "w").writelines(lines)
+         
+   return
+   
+if __name__ == "__main__":
+   if len(sys.argv) < 3:
+      print_help()
+      sys.exit()
+   
+   if   sys.argv[1] == "-s":
+      n_steps = int(sys.argv[2])
+      split_dirs(n_steps)
+   else:
+      print_help()
+      sys.exit()

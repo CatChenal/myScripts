@@ -1,0 +1,62 @@
+#!/bin/bash
+# Called by rename-slices.sh
+#
+if [ $# -lt 1 ]; then
+  echo "Missing input: pdb file needed."
+  exit 0
+elif [ ! -f "$1" ]; then
+  echo "Input not a file."
+  exit 0
+fi
+
+# Find dup waters:
+hoh=$1
+newdups=$hoh".hohdups"
+# consider only the ) atom:
+grep 'O   HOH W' $new | \
+sed -e 's/W\([0-9][0-9][0-9][0-9]\)/W \1/; s/W \([0-9][0-9][0-9]\)/W \1/; s/W  \([0-9][0-9]\)/W   \1/' \
+    -e 's/W   \([0-9]\)/W    \1/; s/W \([0-9]\)$/ _W\1/'| \
+awk 'OFS="\t" {id[$6]++; ; if (id[$6]>1) {printf("%s %4s_%3s_%1d\n",$5,$6,$NF,id[$6])} }'| sed 's/ /@/g' > $newdups
+# Result: all fields concatenated bc of need for only one field in the next cat of for-loop: # W@2574_@W6_2
+
+if [[ -s $newdups ]]; then
+  toolarge=0
+  for dup in $(cat $newdups)
+  do
+    hoh=$( echo ${dup:0:6} | sed -e 's/@//; s/@/ /g')
+    wire=$( echo ${dup:7:3} | sed 's/@/ /')
+    cnt=$( echo ${dup:10:3} | sed 's/_//')
+
+    # Run sed cmd to change chain letter from W -> w in line with wire and hoh:
+    if [[ $cnt -eq 2 ]]; then
+      # duplicates W->x:
+      sedARG=" '/"$wire"$/ { /"$hoh"/ { s/W/x/ } }' "
+    elif [[ $cnt -eq 3 ]]; then
+      # triplicates W->y:
+      sedARG=" '/"$wire"$/ { /"$hoh"/ { s/W/y/ } }' "
+    elif [[ $cnt -eq 4 ]]; then
+      # quadriplicates W->y:
+      sedARG=" '/"$wire"$/ { /"$hoh"/ { s/W/z/ } }' "
+    elif [[ $cnt -eq 5 ]]; then
+      # quadriplicates W->y:
+      sedARG=" '/"$wire"$/ { /"$hoh"/ { s/W/v/ } }' "
+    else
+      echo $new" :: "$dup" - "$hoh", "$wire", "$cnt": too large, skipped"
+      toolarge=1
+    fi
+    if [[ $toolarge -eq 0 ]]; then
+      eval sed "$sedARG" $new > tmp
+    fi
+  done
+else
+  echo $1 ": no dups found"
+  tmp=$1
+fi
+
+awk 'BEGIN{prt12="%-6s%5d %-4s %3s %1s%04d    %8.3f%8.3f%8.3f%6.2f%6.2f%12s\n"} \
+    { if ( length($3)< 4 ) { atm=sprintf(" %-3s",$3) } else { atm=$3 }; \
+      if (NF==11) { chn=substr($5,1,1); seq=substr($5,2,4) } else { chn=$5; seq=$6 }; \
+      { if (NF==11) { printf(prt12,$1,$2,atm,$4,chn,seq,$6,$7,$8,$9,$10,$11) } else \
+                    { printf(prt12,$1,$2,atm,$4,chn,seq,$7,$8,$9,$10,$11,$12) } } }' tmp > $new
+
+/bin/rm -f $newdups tmp

@@ -1,0 +1,6 @@
+# Call syntax: awk -f sumrows.awk < file
+# 
+# Assumption: first col is descriptive (no numbers).
+#
+{ for (i=2; i<=NF; i++) { sum[i]+= $i } }
+END { for (i=2; i<=NF; i++) { print sum[i] } }

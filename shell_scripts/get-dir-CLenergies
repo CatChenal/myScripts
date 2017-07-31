@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for dir in $(echo */head3.lst|sed 's/\/head3\.lst//g; s/APO-R[0|1]00 //g')
+do
+  cd $dir
+    echo $dir
+    get_CLenergies.sh
+  cd ../
+done

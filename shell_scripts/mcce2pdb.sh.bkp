@@ -1,0 +1,28 @@
+#!/bin/bash
+# Cat Chenal 2011-08-02
+# To convert mcce file (eg step2) to pdb format 
+# for proper display/selection in pymol
+
+if [ $# -lt 1 ]; then
+  echo "Usage:  file_name [new_chain_letter] (e.g. to replace "_" from a gromacs structure)"
+  exit 0
+fi
+
+cat $1 | cut -c1-75 > tmp1  #Removes the last 3 columns in an mcce.pdb
+
+# ATOM      1  CL  _CL O0466_001   4.794   5.595   1.773   1.937      -1.000      -1O000M000
+# ATOM      2  N   ARG P0017_000 -22.061 -15.228  28.007   1.500      -0.350      BK____M000
+
+#awk 'BEGIN{prt12="%-6s%5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s\n"} \
+     { if( ($7<0)&&($NF=="O65") ) { $NF="O66" } else if( ($7>0)&&($NF=="O66") ) {$NF="O65"} } \
+     { if( ($4=="_CL")&&($7<0) ) {$NF="P1"} else if( ($4=="_CL")&&($7>0) ) {$NF="P2"} } \
+     { if(NF==12) {printf(prt12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)} \
+             else {printf(prt12,$1,$2,$3,$4,substr($5,1,1),substr($5,2,4),$6,$7,$8,$9,$10,$11)} }' $1 > tmp
+
+  shortname=`basename $1 .pdb`
+
+  SED_ARG=" -e 's/CYD/CYS/' -e 's/_[0-9][0-9][0-9] /     /' -e 's/ \([A-Z]\)00/ \1  /' -e 's/ \([A-Z]\)0/ \1 /' -e 's/_CL/ CL/' "
+  eval sed "$SED_ARG" tmp1 > $shortname.PDB
+
+#  /bin/rm tmp1
+  echo "Converted pdb was saved as $shortname.PDB"

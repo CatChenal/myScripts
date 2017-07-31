@@ -1,0 +1,43 @@
+Record Format of PDB files
+COLUMNS        DATA TYPE       FIELD         DEFINITION                            
+---------------------------------------------------------------------------------
+ 1 -  6        Record name     "ATOM  "                                            
+ 7 - 11        Integer         serial        Atom serial number.                   
+<12 space>
+13 - 16        Atom            name          Atom name.                            
+17             Character       altLoc        Alternate location indicator.         
+18 - 20        Residue name    resName       Residue name.                         
+<21 space>
+22             Character       chainID       Chain identifier.                     
+23 - 26        Integer         resSeq        Residue sequence number.              
+27             AChar           iCode         Code for insertion of residues.       
+<28-29-30 spaces>
+31 - 38        Real(8.3)       x             Orthogonal coordinates for X in Angstroms.                       
+39 - 46        Real(8.3)       y             Orthogonal coordinates for Y in Angstroms.                            
+47 - 54        Real(8.3)       z             Orthogonal coordinates for Z in Angstroms.
+55 - 60        Real(6.2)       occupancy     Occupancy.                            
+61 - 66        Real(6.2)       tempFactor    Temperature factor.  
+<67-72 spaces>
+73 - 76        LString(4)      segID         Segment identifier, left-justified.   
+77 - 78        LString(2)      element       Element symbol, right-justified.      
+79 - 80        LString(2)      charge        Charge on the atom.       
+---------------------------------------------------------------------------------
+
+Typical ATOM line:
+         10        20        30        40        50        60        70        80
+ 123456789.123456789.123456789.123456789.123456789.123456789.123456789.123456789.
+ ATOM      1  N   GLY A   2       1.888  -8.251  -2.511  1.00 36.63      P1   N 
+ ......nnnnn XXXXARRR CnnnnI   xxxxxxxxyyyyyyyyzzzzzzzzoooooobbbbbb      sssseeqq
+
+  Without A and I fields (rare):
+ ......nnnnn XXXX RRR Cnnnn    xxxxxxxxyyyyyyyyzzzzzzzzoooooobbbbbb      sssseeqq
+            ^    ^   ^     ^^^^                                    ^^^^^^
+---------------------------------------------------------------------------------
+            
+Awk numbering of fields:            
+ 1     2     3    4   5...6    7       8       9       10    12          13  14 15: if resSeq less than 4 digits, else:
+ 1     2     3    4   5        6       7       8       9     10          12  13 14: if C9999
+Before using awk's NF, need to find out which of the last 3 fields are used.
+Print string for printf with all fileds:
+
+"%6s%5d %4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n"

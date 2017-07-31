@@ -1,0 +1,5 @@
+#vi filename
+#:set fileformat=unix
+#:wq!
+
+

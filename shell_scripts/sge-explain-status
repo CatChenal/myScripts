@@ -1,0 +1,1 @@
+qstat -explain c -j _Job-ID_

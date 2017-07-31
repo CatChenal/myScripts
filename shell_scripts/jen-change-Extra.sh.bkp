@@ -1,0 +1,48 @@
+#!/bin/sh
+#Make sure to adjust for number of total conformers to do mfe
+#CHECK RUN.PRM to only do 1 titration step
+
+mv head3.lst head3.lst.bkp
+count="-11.0 -25.0 -25.3 -25.6 -27.0 -27.5 -27.8"
+for i in $count
+do
+  sed 's/ 0.000         DMt/'$i'00         DMt/' head3.lst.back > head3.lst
+  mcce
+  grep N5H..M fort.38 > occ
+  echo $i'      kcal/mol' > titpoint
+  cat titpoint occ >> titration.all
+
+x=1
+while [ $x -le 2 ]
+do
+echo mfe++ N5H01M0311_00$x > resi
+chmod 777 resi
+./resi > resi2
+echo $i'      kcal/mol  00'$x >> RES
+grep SUM resi2 >> RES
+x=$(($x+1))
+rm resi2
+rm resi
+done
+x=10
+while [ $x -le 5 ]
+do
+echo mfe++ N5H01M0311_0$x > resi
+chmod 777 resi
+./resi > resi2
+echo $i'      kcal/mol  0'$x >> RES
+grep SUM resi2 >> RES
+x=$(($x+1))
+rm resi2
+rm resi
+done
+done
+rm occ
+rm titpoint
+grep "DM\|kcal" titration.all > output.dummy
+rm *mfe
+grep -v 0.000 titration.all > titration.occ
+rm titration.all
+rm head3.lst
+mv head3.lst.back head3.lst
+

@@ -1,0 +1,16 @@
+#!/bin/bash
+ext=".mfe"
+neg=-1.0
+for conf in `cat $1`
+do
+  echo $conf
+# getnon0rows.sh:
+# nawk -v lim1="$Min" -v lim2="$Min2" 
+# 'BEGIN{OFS="\t"} {sum=0; for(n=2;n<=NF;n++){sum+=$n};tot=(NF+1);$tot=sum; {if((sum >= lim1)||(sum <= lim2)) print}}' $InFile > $InFile.non0
+  
+  bound1=0.5
+  bound2=`expr $bound1*$neg`
+  echo $bound1 $bound2
+  export bound1 bound2
+  mfe++ $conf 0.5 0.5 | nawk -v lim1="$bound1" -v lim2="$bound2" '{sum=0; for(n=2;n<=NF;n++){sum+=$n}; {if((sum >= lim1)||(sum <= lim2)) print}}' > $conf$ext
+done

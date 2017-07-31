@@ -1,0 +1,6 @@
+#!/bin/sh
+# Cat 2011-02-02
+LINE1="This script will match the conformers in the given list with the distance from an anchor\n"
+LINE2="which is the last field in a file starting with 'dist_'.\n"
+LINE3="(The distance file is generated using a script in catalys/bin.)"
+

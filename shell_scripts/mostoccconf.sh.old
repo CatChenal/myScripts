@@ -1,0 +1,46 @@
+#!bin/bash
+# To obtain the pdb for the most occupied conf of the given residue number (nnnn)
+#fort.38 columns:
+# pH4.5 => col8
+
+RES=$1
+bkb=$RES"_000"
+values=""
+mostocc=""
+awkscript1=""
+awkscript2=""
+fileoutput=""
+pH=""
+Col=""
+
+for subfldr in `echo cl000 cl001 cl010 cl011 cl100 cl101 cl110 cl111`
+do
+  cd $subfldr
+
+  head -1 fort.38 > fort.38.hdr
+  values=`cat fort.38.hdr | sed 's/^ [e|p]h//'`
+
+  for pH in $values
+  do
+    export pH
+    awkscript1='{ for(n=2;n<=NF;n++) {if ( $n == col ) print n} }'
+    Col=`awk -v col="$pH" "$awkscript1" "fort.38.hdr"`
+    awkscript1=""
+
+    awkscript1='{ print $1"\t"$col }'
+    awkscript2='NR==1 {print $1}'
+    export Col
+
+    # grep 0445 fort.38 |awk '{ print $1"\t"$8 }' |sort -r -k2|awk 'NR==1 {print $1}'
+    mostocc=`grep "$RES" fort.38 |awk -v col="$Col" "$awkscript1" |sort -r -k2|awk "$awkscript2"`
+
+    fileoutput=$subfldr-$mostocc-$pH
+#    echo $mostocc" --> "$fileoutput
+
+    grep "$bkb|$mostocc" step2_out.pdb > $fileoutput
+    mcce2pdb.sh $fileoutput A
+    /bin/rm $fileoutput
+
+  done
+  cd ../
+done

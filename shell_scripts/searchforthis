@@ -1,0 +1,33 @@
+#!/bin/bash
+# Cat Chenal @ gunner Lab; 2011-01-10
+#
+Usage=" searchforthis [default start dir] searchwhat"
+# 
+if [[ $# -eq 2 ]];
+then 
+  searchdir=$1
+  searchwhat=$2
+else
+  if [[ $# -eq 1 ]];
+  then
+    searchdir="/home/catalys"
+    searchwhat=$1
+  else
+    echo "Call format: "$Usage 
+  fi
+fi
+#echo $searchdir $searchwhat
+
+for item in $searchdir/*
+do
+  if [[ -d $item ]];
+  then
+    newdir=$item
+    searchforthis $newdir $searchwhat
+  fi
+  if [[ $item =~ $searchwhat ]];
+  then
+    echo "$item"
+    break
+  fi
+done

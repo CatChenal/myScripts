@@ -1,0 +1,60 @@
+#!/bin/bash
+# Works on step2 format;
+# CL_466: ~ 1.5A apart in WTR0 vs QER0
+# -> Add CL every 0.5A in all directions within 4A of WTR0 CL466 and within 4A of WTR0 CL467
+
+#[catalys@sibyl 1OTSab-3CL-R0000]> egrep 'A04[7|8]6' step2_out.pdb
+#ATOM  99999  CL  _CL A0476_001   4.688   7.245  -1.275   1.937      -1.000      -1O000M000
+#ATOM  99999  CL  _CL A0486_001   4.752   6.666  -1.625   1.937      -1.000      -1O000M000
+#123456789.123456789.1
+# full line prt format="%-6s%5d %4s %3s %s%4d    %8.3f%8.3f%8.3f%8.3f%6.2f%6.2f      %-4s [lst:2d?]]\n"
+      #                  ATOM  99999  CL  _CL A0486_001xyz
+CL_out="CLs-grid.pdb"
+if [ -f $CL_out ]; then
+  /bin/rm $CL_out
+fi
+
+seqid=400
+gap=1
+
+for CL in $(echo "A0466 A0467 B0466 B0467")
+do
+  grep $CL step2_out.pdb > CL_pdb  #: a one line pdb if not empty
+  if [ -s $CL_pdb ]; then
+    OKgo=1 # debug: skip below
+    if [[ $OKgo -eq 1 ]]; then
+
+      seqid=$(echo "scale=0; $seqid + 100" | bc)
+#      echo $seqid
+
+      nawk -v cl="$CL" -v seq="$seqid" -v incr="$gap" 'BEGIN{S2prt="%20s %1s%4d%4s    %8.3f%8.3f%8.3f%8.3f%6.2f      %-11s\n"; ch=substr(cl,1,1) }
+         { if($5 ~ cl) { xmin=$6-4; ymin=$7-4; zmin=$8-4; xmax=$6+4; ymax=$7+4; zmax=$8+4; \
+                     for( a=xmin; a<=xmax; a+=incr ) {
+                          seq++
+                          printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",a,$7,$8,$9,$10,$11)
+                          for( b=ymin; b<=ymax; b+=incr ) {
+                               seq++
+                               printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",$6,b,$8,$9,$10,$11)
+                               seq++
+                               printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",a,b,$8,$9,$10,$11)
+                               for( c=zmin; c<=zmax; c+=incr ) {
+                                    seq++
+                                    printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",$6,$7,c,$9,$10,$11)
+                                    seq++
+                                    printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",a,$7,c,$9,$10,$11)
+                                    seq++
+                                    printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",$6,b,c,$9,$10,$11)
+                                    seq++
+                                    printf(S2prt,"ATOM  99999  CL  _CL",ch,seq,"_001",a,b,c,$9,$10,$11)
+                               }
+                          }
+                     }
+                   }
+         }' CL_pdb >> $CL_out
+    fi
+  else
+    echo $CL" not found."
+    exit 0
+  fi
+
+done

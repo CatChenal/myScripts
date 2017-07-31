@@ -1,0 +1,89 @@
+#!/bin/bash
+# To setup run folders in
+# /home/catalys/glpT/runs/glpt-apo-e4 or -e8
+# /home/catalys/glpT/runs/glpt-pi-[1, 2] e4 or e8
+# Note:
+#  The glpt-[x] parent folders of the runs already have a link to the epsilon-preset run.prm.
+#
+echo "Enter name of run, e.g. runname= pi-2e4 : "
+#read runname
+runname="pi-1e4"
+
+if [ -z "$runname" ]; then
+  runname='MD'
+  echo "Default runname: MD"
+fi
+echo "Enter slices pdb folder, e.g. folder = slices-apo [slices-pi-1; slices-pi-2] : "
+#read SRC
+SRC="slices-pi-1"
+
+if [ -z "$SRC" ]; then
+  echo "Slices folder needed. Exiting."
+  exit 0
+fi
+echo "Enter valence of ion (no sign: negative ions assumed) if any [ e.g. 1; 2 ] : "
+#read valence
+valence=1
+echo "....................................."
+
+for pdb in `ls -l ../$SRC/|grep '.pdb'| awk '{print $NF}'`
+do
+  # Shorten name for directory and run naming:
+  # GlpT_Cl-.08ns.pdb -> GlpT_CL08
+  # GlpT_Pi2-.0ns.pdb -> GlpT_Pi-2_00
+  # GlpT_Pi-.1ns.pdb: 16 char
+  # GlpT_Pi-.10ns.pdb: 17 char
+
+  if [ ${#pdb} -lt 17 ];then
+  # 1 digit
+     id=$(printf "%02d" $(echo $pdb | grep -o '.[0-9]ns'|sed -e 's/\.//' -e 's/ns//'))
+  else
+  # 2
+     id=$(printf "%2d" $(echo $pdb | grep -o '.[0-9]ns'|grep -o '[0-9][0-9]'))
+  fi
+  if [ $valence -eq 2 ]; then
+    if [ ${#pdb} -lt 17 ];then
+      sedARG=" -e 's/Pi"$valence"-\./PI-"$valence"_/' -e 's/[0-9]ns.pdb/"$id"/' "
+    else
+      sedARG=" -e 's/Pi"$valence"-\./PI-"$valence"_/' -e 's/[0-9][0-9]ns.pdb/"$id"/' "
+    fi
+  else
+    if [ ${#pdb} -lt 17 ];then
+      sedARG=" -e 's/Cl-\./CL/' -e 's/Pi-\./PI-"$valence"_/' -e 's/[0-9]ns.pdb/"$id"/' "
+    else
+      sedARG=" -e 's/Cl-\./CL/' -e 's/Pi-\./PI-"$valence"_/' -e 's/[0-9][0-9]ns.pdb/"$id"/' "
+    fi
+  fi
+  dir=$(echo $pdb |eval sed "$sedARG")
+
+#echo $dir"; id: "$id
+#continue
+
+  if [ ! -d "$dir" ]; then
+    mkdir $dir
+  fi
+
+  cd $dir;
+  echo $dir
+
+  if [ -f "prot.pdb" ]; then
+    /bin/rm prot.pdb
+  fi
+  ln -s ../../$SRC/$pdb prot.pdb
+  # Delete extra O-atom in C-ter:
+  sed -i '/ OT2/d' prot.pdb
+
+  if [ -f "run.prm" ]; then
+    /bin/rm run.prm
+  fi
+  ln -s ../run.prm .
+
+  if [ -f "submit.sh" ]; then
+    /bin/rm submit.sh
+  fi
+  cp ../submit.sh .
+  SED_ARG=" -i 's/@@@@/"$runname$id"/'"
+  eval sed "$SED_ARG" submit.sh
+
+  cd ../
+done

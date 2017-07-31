@@ -1,0 +1,113 @@
+#!/bin/bash
+here=$(pwd)
+here=$(basename $here)
+echo "Current dir: "$here
+if [[ $# -ne 3 ]]; then
+  echo "get-HBcontact-res.sh <fldr_startwith> <RES> <cutoff>"
+  exit 0
+fi
+startwith=$1
+echo "startwith: " $startwith
+RES=$2
+cutoff=$3 #(angstroms)
+#............................................................................
+subfldr="new"
+ls -l "$startwith"*/"$subfldr"| grep '^d'|grep "$subfldr" | grep "$startwith" |sed 's/:$//' > fldr.lst
+cat fldr.lst
+exit 0
+#............................................................................
+
+for fldr in $(ls -l "$startwith"*/"$subfldr"| grep "$subfldr" | grep "$startwith" |sed 's/:$//')
+do
+  cd $fldr
+#  fldr="GlpT-2_nn/new" => remove slashes
+  outfile=${fldr////-}"-res-"$cutoff"A.csv"
+  if [ -f $outfile ]; then
+    /bin/rm $outfile  # rm previous occurrence
+  fi
+  echo "."> $outfile
+
+  if [ ! -f "fort.38.non0" ]; then
+    getnon0rows.sh fort.38
+  fi
+  mostocc=$(basename $fldr)"-pH7.PDB"
+echo $mostocc
+#new-pH7.PDB
+  if [ ! -f $mostocc ]; then
+    get-mostocc.sh 7 # output saved as $fldr-pH7.PDB
+  fi
+
+  # Extract col of pH7 in fort.38:
+  col=$(nawk -v col="7"  '{ for(n=2;n<=NF;n++) {if ( $n == col ) print n} }' fort.38.hdr)
+
+  # get mostocc H165:
+  mostH165=""
+  mostH165=$(egrep 'HIS...0165' fort.38.non0 | nawk -v occCol="$col" '{print $1"\t"occCol}'|sort -k2n|tail -1| nawk '{print substr($1,1,5)"_"substr($1,8,3)}')
+  if [[ ! ${#mostH165} ]]; then
+    mostH165="None"
+  fi
+  echo 'Fldr: '$fldr' ; H165: '$mostH165' <'
+  #..................................................................................................................
+  # mostocc.PDB format:
+  #ATOM  38984  CZ  PHE P 203      16.471   7.213  -4.946   1.7
+  #1     2      3   4   5 6        7        8      9
+
+# Next: different processing depending on valence:
+  if [[ "$RES" =~ "CL" ]]; then
+    # grep anchor from parent, extract X Y Z
+    AnchorLine=$(grep CL $mostocc | nawk ' {print}')
+
+    if [[ ${#AnchorLine} ]]; then
+      X=$(echo $AnchorLine | awk '{print $7}')
+      Y=$(echo $AnchorLine | awk '{print $8}')
+      Z=$(echo $AnchorLine | awk '{print $9}')
+
+      # compute distance and extract list of res within cutoff A of anchor:
+      nawk -v x="$X" -v y="$Y" -v z="$Z" -v max="$cutoff" -v dir="$fldr" -v HIS="$mostH165" 'BEGIN{OFS="\t"}
+           { if ($5 !~ "CL"){dist=sqrt( (x-$7)^2 + (y-$8)^2 + (z-$9)^2 ); { if (dist<=max) { print dir,HIS,"Cl-1","CL",$4"_"$5"_"$6,dist }}} }' $mostocc >> $outfile
+    else
+      echo "No CL in mostocc of "$fldr
+    fi
+
+  else #assumed PO4
+
+    if [ -f most.tmp ]; then
+     /bin/rm most.tmp
+    fi
+    # get mostocc Pi:
+    mostPi=""
+    mostPi=$(egrep PO4 fort.38.non0 | nawk -v occCol="$col" '{print $1"\t"occCol}'|sort -k2n|tail -1| nawk '{print substr($1,1,5)"_"substr($1,8,3)}')
+    if [[ ${#mostPi} ]]; then
+ echo 'Fldr: '$fldr' ; PO4: '$mostPi' <'
+
+      echo "."> most.tmp
+
+      # get O atoms of PO4 to use as anchors:
+      for n in $(echo '1 2 3 4')
+      do
+        AnchorLine=$(egrep 'O'$n'  PO4' $mostocc | nawk ' {print}')
+        if [[ ${#AnchorLine} ]]; then
+          X=$(echo $AnchorLine | nawk '{print $7}')
+          Y=$(echo $AnchorLine | nawk '{print $8}')
+          Z=$(echo $AnchorLine | nawk '{print $9}')
+          # echo $AnchorLine" : "$X", "$Y", "$Z
+
+          # compute distance and extract list of res within cutoff A of anchor:
+          nawk -v x="$X" -v y="$Y" -v z="$Z" -v max="$cutoff" -v dir="$fldr" -v Pi="$mostPi" -v HIS="$mostH165" -v i="$n" 'BEGIN{OFS="\t"}
+            { if ($5 !~ "PO4") { dist=sqrt( (x-$7)^2 + (y-$8)^2 + (z-$9)^2 ); { if (dist <= max) { print dir,HIS,Pi,"O"i,$4"_"$5"_"$6,dist }}} }' $mostocc >> most.tmp
+        else
+          echo "Problem getting AnchorLine for "$RES" in "$fldr
+        fi
+      done
+#      # add non-self dist to O atom of Pi into final output:
+#      cat most.tmp | nawk '{if ($5 !~ "PO4") {print}}'| sort -k6n >> $outfile
+
+    else
+       echo "No "$RES" in mostocc of "$fldr
+    fi
+  fi
+  cd ../../
+done
+# Combine all frames & insert header:
+#cat $startwith*/new/*"-res-"*".csv"| nawk -v res="$RES" 'BEGIN{OFS="\t"} {if (substr($5,1,3) != res) {print}}' | \
+cat $startwith*/new/*"-res-"*".csv"| sed '1i dir      occH165	occAnchor       atmAnchor       Res     dist_anchor'  > $here"-new-allframes-res-"$cutoff"A.csv"

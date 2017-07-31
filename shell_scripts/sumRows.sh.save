@@ -1,0 +1,31 @@
+#!/bin/bash
+# NOTE: ASSUMES first column is descriptive (not totalled)
+#       USES fort.38 by default, else given filename
+#
+E_WRONGARGS=85
+START_COL=2		# default; 1st col=txt, confname, etc: skipped
+
+if [ $# -lt 1 ]
+then
+   echo "Usage: $(basename $0) conf_identifier"
+   exit $E_WRONGARGS
+fi
+id=$1
+filename="fort.38"
+if [ $# -eq 2 ]; then
+  filename=$2
+fi
+
+#awk -v res="_CL-1B0468" '$1 ~ res { print; for (i=2; i<=NF; i++) { sum[i]+= $i }} END {for (i=1; i<=NF; i++ ) {prtline=prtline sum[i]" "} print res"_tot" prtline}'
+
+awk -v res="$id"
+        $1 ~ res {
+                  print
+                  for (i=2; i<=NF; i++) 
+                      { sum[i]+= $i }
+                 }
+        END{
+            for (i=1; i<=NF; i++ )
+                { prtline=prtline sum[i]" " } 
+            print res"_tot" prtline
+           }' $filename

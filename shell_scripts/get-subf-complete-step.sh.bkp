@@ -1,0 +1,58 @@
+#!/bin/bash
+if [[ $# -lt 3 ]]; then
+  echo "Required arguments: 1: subfldr_start: string; 2 subfldr_end: string. Missing."
+  echo "Call: get-subf-complete-step.sh clusterA 025e4 S1 [S2|S3|S4]"
+  echo "Call: get-subf-complete-step.sh sliceA 025e4 S1 [S2|S3|S4]"
+  exit 0
+fi
+subf_start=$1
+subf_end=$2
+
+fldr-all=$subf_start"-all.lst"
+ls |egrep $subf_start > $fldr-all
+# .................................................................
+
+# S4  .................................
+S4yes=$subf_start"-with-S4.lst"
+S4no=$subf_start"-without-S4.lst"
+
+  S4=$(ls -l $subf_start*/pK.out|awk '{print $NF}'|sed 's/\/pK.out//' &> /dev/null)
+  if [[ $MEM -eq 0 ]]; then     #found
+
+
+
+ls -l $subf_start*/pK.out|awk '{print $NF}'|sed 's/\/pK.out//' > $S4yes
+if [[ -s $S4yes ]];then
+  /bin/rm $S4yes
+  echo $subf_start" | "$subf_end": No subfolders have completed S4."
+  $fldr-all=$S4no
+else
+  sdiff $fldr-all $S4yes | grep '<' |awk '{print $1}'> $S4no
+  if [[ -s $S4no ]];then
+    /bin/rm $S4no
+    echo $subf_start" | "$subf_end": All subfolders have completed S4."
+    exit 0
+  fi
+fi
+
+# S3  .................................
+S3yes=$subf_start"-with-S3.lst"
+S3no=$subf_start"-without-S3.lst"
+
+ls -l $subf_start*/head3.lst|awk '{print $NF}'|sed 's/\/head3.lst//' > $S3yes
+if [[ -s $S3yes ]];then
+  /bin/rm $S3yes
+  echo $subf_start" | "$subf_end": No subfolders have completed S3."
+  $fldr-all=$S3no
+else
+  sdiff $S4no $S3yes | grep '<' |awk '{print $1}'> $S3no
+
+
+
+# S2
+fldr-yes=$subf_start"-with-S2.lst"
+fldr-no=$subf_start"-without-S2.lst"
+
+ls -l $subf_start*/step2_out.pdb|awk '{print $NF}'|sed 's/\/step2_out.pdb//' > $fldr-S2
+sdiff $fldr-all $fldr-S2 | grep '<' |awk '{print $1}'> $fldr-noS2
+

@@ -1,0 +1,88 @@
+#!/bin/bash
+RES=$1 ## 0148
+redo_mfe=0
+h3cols=0
+for ch in $(echo 'A')  #B')
+do
+   RESid=$ch$RES
+
+   h3_mostfav.sh $RESid 0 # outfile = $RESid"_mostfav.csv"   #CONFORMER          vdw0     vdw1     epol    dsolv    h3Tot
+
+   NEU='GLU0.'$RESid;   NEG='GLU-1'$RESid
+
+   nawk -v crg="$NEU" '$1~crg {print $1, $2}' fort.38 > $RESid"_neu_holo.occ"
+   nawk -v crg="$NEU" '$1~crg {print $1, $NF}' fort.38 > $RESid"_neu_apo.occ"
+   nawk -v crg="$NEG" '$1~crg {print $1, $2}' fort.38 > $RESid"_neg_holo.occ"
+   nawk -v crg="$NEG" '$1~crg {print $1, $NF}' fort.38 > $RESid"_neg_apo.occ"
+
+   grep $NEU $RESid"_mostfav.csv" > $RESid"_neu.h3"
+   grep $NEG $RESid"_mostfav.csv" > $RESid"_neg.h3"
+
+   # Get weighted sum of RES confs:
+   for crg in $(echo 'neu neg')
+   do
+      file2=$RESid"_"$crg".h3"
+
+      for stat in $(echo 'holo apo')
+      do
+         occ_file=$RESid"_"$crg"_"$stat".occ"
+
+         for conf in $(awk '{print $1}' $file2)
+         do
+            mfe_file=$conf".mfe"
+           file2=$file2"."$stat
+
+            if [[ $redo_mfe -eq 1 ]]; then
+               mfe++ $conf -t 1 -x 1 > $mfe_file
+            fi
+            grep -m 1 SUM $mfe_file > $mfe_file".sum"
+
+            # update h3 file with sum_mfe, then occ
+            if [[ "$stat" = "holo" ]]; then
+               sum_mfe=$(awk '/SUM/{print $2;exit}' $mfe_file".sum")
+               strAWK=" '/"$conf"/{print $2;exit}' "
+               occ=$(eval awk "$strAWK" $occ_file)
+            else
+               sum_mfe=$(awk '/SUM/{print $NF;exit}' $mfe_file".sum")  #  'col 2=holo; col NF=apo
+               strAWK=" '/"$conf"/{print $NF;exit}' "
+               occ=$(eval awk "$strAWK" $occ_file)
+            fi
+            strSED=" -i '/"$conf"/{s/$/	"$sum_mfe"/; s/$/	"$occ"/}' "
+            eval sed -i "$strSED" $file2
+         done  #conf
+
+         h3cols+=1
+         filein=$RESid"_"$crg"_"$stat".occ" # 1st file= $RESid"_neu_holo.occ"
+         fileout=$file2".new"
+
+# CONFORMER         vdw0     vdw1     epol    dsolv     h3Tot    holo_mfe   holo_occ   "holo_occ","w_Tot_holo"
+# 1                  2       3        4       5         6        7          8          NF+1      NF+2
+         nawk -v file1="$filein" -v col="$h3cols" -v state="$stat" ' BEGIN \
+                                  { OFS="\t";
+                                    # load array with contents of file1:
+                                    while ( getline < file1 > 0 )
+                                    {
+                                       f1_counter++; f1[f1_counter,1] = $1; f1[f1_counter,2] = $2
+                                    }
+                                    {print "CONFORMER          vdw0     vdw1     epol    dsolv    h3Tot   holo_mfe", state"_occ", "w_Tot"}
+                                  }
+                                  {
+                                    $(NF+1)=f1[NR,2];
+                                    $(NF+2)=sprintf("%7.2f",($6+$(6+col))*f1[NR,2]); if( $(NF+2)=="-0.00" ){ $(NF+2)="0.00" };
+                                    prtLine=sprintf("%14s",$1);
+                                    for (i=2; i<=NF; i++) { prtLine=prtLine" "sprintf("%7.2f",$i) };
+                                    print prtLine;
+                                    for (i=2; i<=NF; i++){ sum[i]+=$i }
+                                  }
+                                  END{ prtLine=sprintf("%14s","totals");
+                                       for (i=2; i<=NF; i++) { prtLine=prtLine" "sprintf("%7.2f",sum[i]) };
+                                       print prtLine }' $file2"."$stat > $fileout
+
+      done #stat
+   done # crg
+done # ch
+
+#h3head=$(nawk 'NR==1 { printf("%-14s %8s %8s %8s %8s %8s\n", $2,$(NF-6),$(NF-5),$(NF-3),$(NF-2),"h3Tot") }' $H3File)
+#strSED='1i '$h3head
+#sed -i "$strSED" $outfile
+

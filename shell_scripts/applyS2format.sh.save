@@ -1,0 +1,21 @@
+#!/bin/sh
+# Cat Chenal @ Gunner lab - 2010-12-28
+# Scriptname = applyS2format.sh
+#
+PRTF="ATOM  %5d %4s%c%3s %c%04d%c%03d%8.3f%8.3f%8.3f %7.3f      %6.3f      %-11s\n"
+
+Usage=`echo "$LINE1"`
+
+if [ $# -lt 2 ]; then
+   echo "$Usage";
+   exit 0;
+fi
+
+cp $1 $1.bkp
+echo "----  $1 has been backed up into $1.bkp"
+
+
+awk 'printf("%05d %14s %s %4.2f %6.3f %5.0f %5.2f %2d %2d %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %11s                                                                                    \n", $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)} ' $h3.bkp > $h3.new1
+
+echo "End of applyS2format.sh -------------------<"
+

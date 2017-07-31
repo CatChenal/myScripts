@@ -1,0 +1,56 @@
+#!/bin/bash
+# TO be called outside a subfolder containing converted (.PDB) files that are preferably most-occ files.
+#
+#  To get all ions/ligands as a chain for coloring purposes:
+#   -> visualize resulting pdb in pymol & color by spectrum; set sphere_scale to 1.50
+#   -> save as pic to overlay on distance graph.
+#
+# Note: "-1" in reassignment of x-coord: to match time-slice of struc coming from an md sim (e.g. t-0 -> md_00 -> ion00 -> xyz(0,0,0);
+#     (awk increments counter before assignment, so r=1 on the '0th' slice).
+#
+A1="ARG1 :: ion name (e.g. CL, PO4)"
+A2="ARG2 :: separation_distance (separation of 4 btw ion maybe too tight; 8 better)"
+A3="ARG3 :: folder containing converted (.PDB) files"
+A4="ARG4 :: slice: e.g. start of name of pdbs in given folder"
+A5="[ARG5 :: atom_name_selection: atom to select in a multi-ion atom, e.g. P]"
+#
+if [ $# -lt 4 ]; then
+  echo "Argument(s) missing:"
+  echo "           "$A1
+  echo "           "$A2
+  echo "           "$A3
+  echo "           "$A4
+  echo "           "$A5
+  echo "Example: get-ion-spectrum.sh PO4 8 PDBs7 GlpT_PI P"
+  exit 0
+fi
+
+ION=$1
+GAP=$2
+FLDR=$3
+SLICE=$4
+grepARG="$ION $FLDR/*.PDB"
+sedARG=" 's/^"$FLDR"\/"$SLICE"..*\.PDB://' "
+
+# Coordinates of most occ'd IONs:
+if [ $# -eq 5 ]; then
+  outfile1=$FLDR/$ION-$5xyz
+
+  ATM_SEL=" '$5 '"
+  grepARG="$ATM_SEL $FLDR/*.PDB"
+
+  eval egrep $grepARG |  eval grep $ATM_SEL | eval sed $sedARG  > $outfile1.PDB
+  awk -v gap=$GAP '{ for( r=0; r<=NR; r++ ) $7=(-1+r)*gap}; $8=0.000; $9=0.000; \
+        { printf("%-6s%5d%4s%5s%2s%4s    %8.3f%8.3f%8.3f\n", $1,$2,$3,$4,$5,$6, $7, $8, $9)}' $outfile1 > $outfile1-spectrum-gap$GAP.PDB
+
+#> egrep 'P  PO4' PDBs7/GlpT_PI*.PDB | sed -e 's/^PDBs7\/GlpT_PI//' -e 's/-occ7.PDB://'
+#46ATOM   1381  P   PO4 H  01       0.757   1.849  -3.857
+#47ATOM   1382  P   PO4 H  01       1.397   3.077  -3.342
+
+else
+  outfile1=$FLDR/$IONxyz
+
+  egrep $ION $FLDR/*.PDB | grep -v dist | eval sed $sedARG  > $outfile1.PDB
+  awk -v gap=$GAP '{ for( r=0; r<=NR; r++ ) $7=(-1+r)*gap}; $8=0.000; $9=0.000; \
+    { printf("%-6s%5d%4s%5s%2s%4s    %8.3f%8.3f%8.3f\n", $1,$2,$3,$4,$5,$6, $7, $8, $9)}' $outfile1 > $outfile1-spectrum-gap$GAP.PDB
+fi

@@ -1,0 +1,7 @@
+
+# to resize all numbers in file to a different procision:
+awk '{for (i=1; i<=NF; i++) printf "%.3f %s", $i, (i==NF?RS:FS)}' file
+
+# Round without truncating to given print float precision
+# pres= print float precision, 3 (as in %6.3f) + 1
+echo -0.00182| awk '{ sum=$1; prec=(3+1); printf("%f, %s %6.3f\n", $sum, "Rounded: ", (sum-=sum<0?-(5*10^-prec):(5*10^-prec)+0)) }'

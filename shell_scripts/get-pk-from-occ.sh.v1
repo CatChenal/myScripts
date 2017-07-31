@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# po4.tpl:CONFLIST PO4        PO4BK PO401 PO4-1 PO4-2 PO4-3 PO4DM
+# his.tpl:CONFLIST HIS        HISBK HIS01 HIS02 HIS+1 #HIS-1
+# Extrapolation formula:
+#   (0.5-Y(k-1))/SLOPE(/Yk-1:Yk, Xk-1:Xk)+ Xk-1 = X(Y=0.5)
+#
+# For each conf, get occ->sum->calc sum-> find interval containing 0.5+-e=> get pH (extrapolate)
+#tpl_with_path=$1
+#for conf in $(grep CONFLIST $tpl_with_path | awk '{for(i=3;i<=NF;i++){out=out$i"\n"}}{print out}'|sed '/^$/d' | egrep -v 'BK|DM|#')
+#do
+#done
+#.........................................
+# ARG= one single conf
+i=0; Y1=0; Y2=0;
+
+if [ ! -f "fort.38" ]; then
+  echo "fort.38 not found"
+  exit 0
+else
+  head -1 fort.38 > hdr.38
+fi
+if [ ! -f "fort.38.non0" ]; then
+  getnon0rows.sh fort.38 0.005
+fi
+grepARG=" '$1' fort.38.non0"
+$(eval grep -q "$grepARG" &> /dev/null)
+if [ $? -gt 0 ]; then	  # not found
+  echo $1" not found in fort.38.non0"
+  exit 0
+fi
+eval grep "$grepARG" > occ
+sum_all_cols.sh occ > sum.occ
+#sum_occ 1 1 0.998 0.997 0.999 0.995 0.942 0.855 0.158 0.442 0.467 0.381 0.315 0.266 0.172 0.929
+sed -i 's/sum_occ//' sum.occ
+set $(cat sum.occ)
+for val in $@
+do
+  let "i+=1"
+  if [ $val -lt 
+# echo $val
+
+done

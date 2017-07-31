@@ -1,0 +1,30 @@
+#!/bin/bash
+# Scriptname: clear-crashfiles
+# Cat Chenal @ Gunner Lab; 2012-05-16
+#
+# Purpose:      Removes mcce output files from S2 to S4 (if any)
+#               due to core dump crash (assuming Step1 ran ok).
+#  ----------------------------------------------------------------------------
+lst='step2_out.pdb step3_out.pdb head2.lst head3.lst *log vdw* fort.38 sum_crg.out pK.out respair.lst vdw0.lst rot_stat entropy.out energies.opp run.trace rot_stat core ~tem*'
+
+inventory-fldrs.sh | grep 'Core'|awk '{print $1}' > core.fldr
+
+if [ -s core.fldr ]; then
+  echo "Core dump found in:"
+  cat core.fldr
+
+  for fldr in `cat core.fldr`
+  do 
+    cd $fldr
+    echo "Clearing "$fldr
+    for f in `echo $lst`
+    do
+      if [ -f "$f" ]; then
+        /bin/rm $f
+      fi
+    done
+    cd ../
+  done
+else
+  echo "No crash files to clear"
+fi

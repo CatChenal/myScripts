@@ -1,0 +1,28 @@
+[catalys@sibyl bin]> cat 1.txt
+abc
+pattern
+def
+move
+
+[catalys@sibyl bin]> cat 2.txt
+hello
+
+[catalys@sibyl bin]> 
+sed -e "/pattern/ 
+     {h
+         r 2.txt
+         g
+     }; /pattern/d" 1.txt
+abc
+hello
+def
+move
+
+# Also works w/o h and g (but not as 1 liner):
+sed -e "/pattern/ {
+         r 2.txt
+     }; /pattern/d" 1.txt
+abc
+hello
+def
+move

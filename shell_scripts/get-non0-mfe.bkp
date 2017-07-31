@@ -1,0 +1,40 @@
+#!/bin/sh
+# Scriptname: get-non0-mfe.sh
+# Cat Chenal @ Gunner Lab; 2010-08-24
+#
+# Purpose:      Outputs lines in CONF.mfe that are non-zero across a ph range
+#               (& above threshold) into a file named non0CONF.mfe
+#
+# Inputfile:	None, but mfe file(s) is(are) required, as is
+#               "the awk line" file: get-non0-mfe.line
+#
+# Arguments: 	A list of conformer names (or aleast one)
+#
+# Usage1:       get-non0-mfe.sh occXYZ.conf
+# Usage2:       get-non0mfe.sh _CL-1X0283_001 _CL-1X0285_001 _CL-1X0297_001
+#  ----------------------------------------------------------------------------
+this="get-non0-mfe.sh"
+awklinefile="~/bin/get-non0-mfe.line"
+flag=0
+
+if [ $# = 0 ];
+then
+  echo "  Script $this requires at least one conformer name as arg."
+  echo "  Call example: > $this n or acdb"
+  echo "--- $this ---  Call error  --- over."
+  flag="1"
+#fi
+#if [ $flag = 0 ]; 
+else
+  args=("$@")
+#then
+  for ( i = 0; i < $#; i++ ); do
+    ID= ${args[${i}]}
+    echo $ID
+
+    `sed 's/CONF/$ID/g' $awklinefile > $ID.cmd`
+    `. $ID.cmd`
+  done  
+  echo ""
+  echo "--- $this --- over."
+fi

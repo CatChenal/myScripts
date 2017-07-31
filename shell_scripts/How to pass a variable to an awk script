@@ -1,0 +1,25 @@
+SOURCE:  http://www.grymoire.com/Unix/Quote.html
+How to pass a variable to an awk script (simpler example)
+
+I find the Bourne shell easier to use when I write multi-line quotes which are awk scripts:
+
+#!/bin/sh -x
+#This script counts how many people
+# are in the group specified as the first argument
+
+grp=${1:?"Missing argument"}	# get group ID number
+                              # If missing, report an error and exit.
+awk -F: '
+# Awk script starts here
+BEGIN {
+	# set total to zero 
+	#   before we start
+	total=0;	
+}
+$3 ~ /^'$grp'$/ {total++;} 
+END {
+	# end of file, print total
+	printf("Total: %d\n", total);
+}' </etc/passwd
+
+This example uses the "$grp" shell variable right in the middle of the awk script. This is a common method of passing shell variables into the middle of an awk script.

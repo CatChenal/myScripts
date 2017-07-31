@@ -1,0 +1,12 @@
+#!/bin/bash
+
+for dir in $(ls CL_*_ch/fort.38|awk '{print substr($1,1,9)}')
+do
+  cd $dir
+     if [[ ! -f fort.38.rowstdv.csv ]]; then
+        getrowstdv.sh fort.38
+     fi
+  cd ../
+done
+
+echo do_stdev_all: over

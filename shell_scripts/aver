@@ -1,0 +1,45 @@
+#!/bin/bash
+sum=0
+cnt=0
+tmp="av.tmp"
+
+if [ $# == 0 ];then
+  echo "$0 returns the average of a list of numbers; none given."
+  exit 0
+fi
+if [ -f "$tmp" ]; then
+  /bin/rm $tmp
+fi
+
+# Check input as a command line list or file?
+if [ $# -gt 1 ]; then
+  touch $tmp
+  for val in $@
+  do
+    echo $val>>$tmp
+  done
+  set $tmp
+else
+  if [ ! -f "$1" ]; then
+    echo "Single input (not averaged): "$1
+    exit 0
+  fi
+fi
+nawk ' \
+     BEGIN{sum=0; hdr=""} \
+     { \
+     for (n=1; n<=NF; n++) \
+       if ( (n==1)&&(!isnum($i) ) then \
+         hdr=$i \
+       else \
+         if (!isnum($i) then \
+           print "line", NR, "contains non-numerics, skipping it ..." \
+           break \
+         else \
+           sum+=$i \
+     } \
+     END{print sum/NR}' $1 \
+
+     func isnum(x) { return x == x + 0 } \
+
+' $1

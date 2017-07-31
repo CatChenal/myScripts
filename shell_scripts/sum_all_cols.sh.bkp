@@ -1,0 +1,46 @@
+#!/bin/bash
+# NOTE: ASSUMES first column is descriptive (not totalled)
+#
+E_WRONGARGS=85
+
+if [ $# -lt 1 ]
+then
+   echo "Usage: `basename $0` filename [header t/f]"
+   exit $E_WRONGARGS
+fi
+
+
+filename=$1
+if [ $# -eq 2 ]; then
+   if [ $2=="t" -o $2=="T" ]; then
+     nawk 'BEGIN{prtline=""}
+           NR>1 {
+             for (i=2; i<=NF; i++)
+             {
+               sum[i]+= $i
+             }
+           }
+          END{
+            for (i=2; i<=NF; i++)
+            {
+              prtline=prtline sum[i]" "
+            }
+            print prtline
+          }' $filename
+   else
+     nawk 'BEGIN{prtline=""}
+           {
+             for (i=2; i<=NF; i++)
+             {
+               sum[i]+= $i
+             }
+           }
+           END{
+             for (i=2; i<=NF; i++)
+             {
+               prtline=prtline sum[i]" "
+             }
+             print prtline
+          }' $filename
+   fi
+fi

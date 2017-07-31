@@ -1,0 +1,39 @@
+#!/bin/bash
+this="`basename $0`"
+USAGE=$this" filename [threshold_value]"
+# Example:  getnon0rows.sh afile 0.25
+#
+#  This script can be called without a threshold value, then 0.05 is used by default
+#  and is applied to the sum of values in all columns but the first.
+#  The input file MUST HAVE the same format as that of fort.38: that is column 2 to last
+#  can be summed in a meaningful way.
+#
+# Result is saved into a file named [input file name].non0
+#
+Min="0.05"
+
+if [ $# -eq 0 ]
+then
+	echo $this" requires a filename"\n$USAGE
+	exit
+fi
+if [ -f $1 ] 
+then
+	InFile=$1
+else
+	echo $this" requires a filename"\n$USAGE
+	exit
+fi
+if [ $# -eq 2 ]
+then
+	Min=$2
+fi
+
+Min2=`echo "$Min*-1"|bc`
+
+#echo "Min: " $Min"; Min2: " $Min2
+
+export Min Min2
+nawk -v lim1="$Min" -v lim2="$Min2" '{sum=0; for(n=2;n<=NF;n++){sum+=$n};tot=(NF+1);$tot=sum; {if((sum >= lim1)||(sum <= lim2)) print}}' $InFile > $InFile.non0
+
+echo ----  $this over ---  Result saved into $InFile.non0
